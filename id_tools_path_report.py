@@ -106,26 +106,26 @@ ignores = {
 }
 
 def found(at):
-    if bpy.app.version >= (5, 0, 0):
-        final = ''
-        for attr in at[1:]:
-            if attr.startswith('['):
-                final += attr
-            else:
-                final += '.' + attr
-        final = final.lstrip('.')
-        path = main_id.path_resolve(final, False)
-        print(path, repr(path), final)
-        print(path.path_from_module())
-#
-    else:
-        final = at[0]
-        for attr in at[1:]:
-            if attr.startswith('['):
-                final += attr
-            else:
-                final += '.' + attr
-        print(final)
+    #if bpy.app.version >= (5, 0, 0):
+    #    final = ''
+    #    for attr in at[1:]:
+    #        if attr.startswith('['):
+    #            final += attr
+    #        else:
+    #            final += '.' + attr
+    #    final = final.lstrip('.')
+    #    path = main_id.path_resolve(final, False)
+    #    print(path, repr(path), final)
+    #    print(path.path_from_module())
+    #
+    #else:
+    final = at[0]
+    for attr in at[1:]:
+        if attr.startswith('['):
+            final += attr
+        else:
+            final += '.' + attr
+    print(final)
 
 def starter(id, line, line_data, target_id, ignore_cache):
     global main_id
