@@ -1,10 +1,10 @@
 bl_info = {
-    "name" : 'Data Scale' ,
+    "name" : 'ID Tools' ,
     "description" : "Quickly inspect the total size of datablocks",
     "author" : "hisanimations",
     "version" : (1, 1, 0),
     "blender" : (3, 0, 0),
-    "location" : "Outliner > Context Menu > Data Scale",
+    "location" : "Outliner > Context Menu > ID Tools",
     "support" : "COMMUNITY",
     "category" : "Import-Export",
     "doc_url": "https://github.com/hisprofile/datascale"
@@ -15,11 +15,6 @@ import os
 from bpy.types import (Operator, AddonPreferences, Menu, PropertyGroup)
 from bpy.utils import register_classes_factory
 from bpy.props import (BoolProperty, StringProperty, EnumProperty, PointerProperty)
-
-TEMP_FILE = os.path.join(
-    os.path.dirname(__file__),
-    'temp.blend'
-)
 
 floating_id: bpy.types.ID = None
 exclude_id: bpy.types.ID = None
@@ -37,7 +32,6 @@ id_type_to_collection_name = {
     'CURVES': 'curves',
     'FONT': 'fonts',
     'GREASEPENCIL': 'grease_pencils',
-    'GREASEPENCIL_V3': 'grease_pencils_v3',
     'IMAGE': 'images',
     'KEY': 'shape_keys',
     'LATTICE': 'lattices',
@@ -66,7 +60,7 @@ id_type_to_collection_name = {
     'WINDOWMANAGER': 'window_managers',
     'WORKSPACE': 'workspaces',
     'WORLD': 'worlds'
-    }
+}
 
 id_type_to_icon = {
     "ACTION": "ACTION",
@@ -109,6 +103,53 @@ id_type_to_icon = {
     "WORKSPACE": "WORKSPACE",
     "WORLD": "WORLD_DATA"
 }
+
+enum_id_items = [
+    ('', 'ID Type', ''),
+    ('ACTION', 'Action', '', 'ACTION', 0),
+    ('ARMATURE', 'Armature', '', 'ARMATURE_DATA', 1),
+    ('BRUSH', 'Brush', '', 'BRUSH_DATA', 2),
+    ('CACHEFILE', 'Cache File', '', 'FILE', 3),
+    ('CAMERA', 'Camera', '', 'CAMERA_DATA', 4),
+    ('COLLECTION', 'Collection', '', 'OUTLINER_COLLECTION', 5),
+    ('CURVE', 'Curve', '', 'CURVE_DATA', 6),
+    ('CURVES', 'Curves', '', 'CURVES_DATA', 7),
+    ('FONT', 'Font', '', 'FONT_DATA', 8),
+    ('GREASEPENCIL', 'Grease Pencil', '', 'GREASEPENCIL', 9),
+    ('IMAGE', 'Image', '', 'IMAGE_DATA', 11),
+    ('KEY', 'Key', '', 'SHAPEKEY_DATA', 12),
+    ('LATTICE', 'Lattice', '', 'LATTICE_DATA', 13),
+    ('LIBRARY', 'Library', '', 'LIBRARY_DATA_DIRECT', 14),
+    ('LIGHT', 'Light', '', 'LIGHT_DATA', 15),
+    ('LIGHT_PROBE', 'Light Probe', '', 'LIGHTPROBE_SPHERE', 16),
+    ('LINESTYLE', 'Line Style', '', 'LINE_DATA', 17),
+    ('MASK', 'Mask', '', 'MOD_MASK', 18),
+    ('MATERIAL', 'Material', '', 'MATERIAL_DATA', 19),
+    ('', '', ''),
+    ('MESH', 'Mesh', '', 'MESH_DATA', 20),
+    ('META', 'Metaball', '', 'META_DATA', 21),
+    ('MOVIECLIP', 'Movie Clip', '', 'TRACKER', 22),
+    ('NODETREE', 'Node Tree', '', 'NODETREE', 23),
+    ('OBJECT', 'Object', '', 'OBJECT_DATA', 24),
+    ('PAINTCURVE', 'Paint Curve', '', 'CURVE_BEZCURVE', 25),
+    ('PALETTE', 'Palette', '', 'COLOR', 26),
+    ('PARTICLE', 'Particle', '', 'PARTICLE_DATA', 27),
+    ('POINTCLOUD', 'Point Cloud', '', 'POINTCLOUD_DATA', 28),
+    ('SCENE', 'Scene', '', 'SCENE_DATA', 29),
+    ('SCREEN', 'Screen', '', 'WORKSPACE', 30),
+    ('SOUND', 'Sound', '', 'SOUND', 31),
+    ('SPEAKER', 'Speaker', '', 'SPEAKER', 32),
+    ('TEXT', 'Text', '', 'TEXT', 33),
+    ('TEXTURE', 'Texture', '', 'TEXTURE_DATA', 34),
+    ('VOLUME', 'Volume', '', 'VOLUME_DATA', 35),
+    ('WINDOWMANAGER', 'Window Manager', '', 'WINDOW', 36),
+    ('WORKSPACE', 'Workspace', '', 'WORKSPACE', 37),
+    ('WORLD', 'World', '', 'WORLD_DATA', 38)
+]
+
+if bpy.app.version < (5, 0, 0):
+    id_type_to_collection_name['GREASEPENCIL_V3'] = 'grease_pencils_v3'
+    enum_id_items.insert(11, ('GREASEPENCIL_V3', 'Grease Pencil v3', '', 'GREASEPENCIL', 10))
 
 def return_ids(context) -> set[bpy.types.ID] | bpy.types.ID:
     if context.area.type in {'OUTLINER', 'VIEW_3D'}:
@@ -176,7 +217,7 @@ def template_any_ID(layout: bpy.types.UILayout, data, property: str, type_proper
 class id_tools_OT_weigh(Operator):
     bl_idname = 'id_tools.weigh'
     bl_label = 'Weigh IDs'
-    bl_description = 'Export the datablocks to calculate their total size on the hard drive.'
+    bl_description = 'Export the IDs to calculate their total size on the hard drive.'
 
     @classmethod
     def poll(cls, context):
@@ -187,11 +228,14 @@ class id_tools_OT_weigh(Operator):
         gatherings = return_ids_set(context)
         if not gatherings:
             return {'CANCELLED'}
-
-        bpy.data.libraries.write(TEMP_FILE, gatherings, compress=props.compress)
-        file_size = os.path.getsize(TEMP_FILE)
+        if bpy.app.version >= (4, 2, 0):
+            temp_file = os.path.join(bpy.utils.extension_path_user(__package__, create=True), 'temp.blend')
+        else:
+            temp_file = os.path.join(os.path.dirname(__file__), 'temp.blend')
+        bpy.data.libraries.write(temp_file, gatherings, compress=props.compress)
+        file_size = os.path.getsize(temp_file)
         file_size = format_size(file_size)
-        os.remove(TEMP_FILE)
+        os.remove(temp_file)
         report_msg = ' '.join([
             'The',
             str(len(gatherings)),
@@ -387,7 +431,7 @@ class id_tools_OT_export(Operator):
 class id_tools_OT_id_quick_attach(Operator):
     bl_idname = 'id_tools.id_quick_attach'
     bl_label = 'ID Quick Attach'
-    bl_description = 'Attach list of parasitic IDs to a host ID to ensure their import. If only one parasitic ID is selected, it will not be put in a list. Assigned property will be "optiploy_attach"'
+    bl_description = 'Quickly parent selected children ID(s) to a parent ID with a custom property'
 
     bl_options = {'UNDO'}
 
@@ -401,12 +445,12 @@ class id_tools_OT_id_quick_attach(Operator):
 
     def does_exist_prop(self, context):
         id = context.id
-        prop = id.get('optiploy_attach', 'HAS_NO_PROP')
+        prop = id.get('id_tools_attach', 'HAS_NO_PROP')
         return prop != 'HAS_NO_PROP'
     
     def can_add_to_existing(self, context):
         id: bpy.types.ID = context.id
-        prop = id.get('optiploy_attach', 'HAS_NO_PROP')
+        prop = id.get('id_tools_attach', 'HAS_NO_PROP')
         if isinstance(prop, list):
             return flag_YES
         if isinstance(prop, bpy.types.ID):
@@ -425,42 +469,38 @@ class id_tools_OT_id_quick_attach(Operator):
 
         can_add = self.can_add_to_existing(context)
         if bool(can_add):
-            existing_ids = host_id.get('optiploy_attach')
+            existing_ids = host_id.get('id_tools_attach')
             if can_add == flag_MAKE_LIST:
                 existing_ids = [existing_ids]
             existing_ids.extend(parasitic_ids)
-            host_id['optiploy_attach'] = existing_ids
+            host_id['id_tools_attach'] = existing_ids
             return {'FINISHED'}
         else:
             if len(parasitic_ids) == 1:
-                host_id['optiploy_attach'] = parasitic_ids.pop()
+                host_id['id_tools_attach'] = parasitic_ids.pop()
             else:
-                host_id['optiploy_attach'] = parasitic_ids
+                host_id['id_tools_attach'] = parasitic_ids
             return {'FINISHED'}
 
 class id_tools_OT_id_attach(Operator):
     bl_idname = 'id_tools.id_attach'
     bl_label = 'ID Attach'
-    bl_description = 'Quickly attach a selected ID to an ID'
+    bl_description = 'Parent selected children ID(s) to a parent ID with a custom property'
 
     add_to_existing: BoolProperty(default=False, name='Add to Existing', description='Add to the existing property')
 
     was_invoked = False
 
     bl_options = {'UNDO'}
-
-    def update_prop(self, context):
-        if self.property == '':
-            self.property = 'optiploy_attach'
     
     def does_exist_prop(self, context):
-        props = context.window_manager.optiploy_props
+        props = context.window_manager.id_tools_props
         if not props.id: return 'HAS_NO_PROP'
         prop = props.id.get(props.property, 'HAS_NO_PROP')
         return prop != 'HAS_NO_PROP'
     
     def can_add_to_existing(self, context):
-        props = context.window_manager.optiploy_props
+        props = context.window_manager.id_tools_props
         if not props.id: return False
         prop = props.id.get(props.property, 'HAS_NO_PROP')
         if isinstance(prop, list):
@@ -478,7 +518,7 @@ class id_tools_OT_id_attach(Operator):
             return self.invoke(context, None)
         
         self.was_invoked = False
-        props = context.window_manager.optiploy_props
+        props = context.window_manager.id_tools_props
         if not props.id: return {'CANCELLED'}
         selected_ids = list(return_ids_set(context))
         can_append = self.can_add_to_existing(context)
@@ -496,7 +536,7 @@ class id_tools_OT_id_attach(Operator):
     def draw(self, context):
         does_exist = self.does_exist_prop(context)
         can_append = self.can_add_to_existing(context)
-        props = context.window_manager.optiploy_props
+        props = context.window_manager.id_tools_props
 
         layout = self.layout
         alert = does_exist and not (bool(can_append) and self.add_to_existing) and bool(props.id)
@@ -520,8 +560,8 @@ class id_tools_OT_id_attach(Operator):
 
 class id_tools_OT_id_remove_from_hosts(Operator):
     bl_idname = 'id_tools.id_remove_from_hosts'
-    bl_label = 'Remove Selected ID(s) from Host(s)'
-    bl_description = 'Remove all selected IDs as an attachment on any host'
+    bl_label = 'Unparent Selected ID(s) from Parent(s)'
+    bl_description = 'Unparent selected IDs from possible parent IDs by removing them from custom properties'
 
     def execute(self, context):
         ids = return_ids_set(context)
@@ -549,8 +589,8 @@ class id_tools_OT_id_remove_from_hosts(Operator):
 
 class id_tools_OT_parasite_remove(Operator):
     bl_idname = 'id_tools.parasite_remove'
-    bl_label = 'Dump ID(s) from Selected Host(s)'
-    bl_description = 'From the selected host(s), remove all attachments to data-blocks in the form of custom properties'
+    bl_label = 'Dump ID(s) from Selected Parent(s)'
+    bl_description = 'Dump all children IDs from selected parent IDs from custom properties'
 
     def execute(self, context):
         hosts = return_ids_set(context)
@@ -611,7 +651,7 @@ class id_tools_OT_path_report(Operator):
         return {'FINISHED'}
 
 class ID_TOOLS_MT_Menu(Menu):
-    bl_label = 'Data Scale Operators'
+    bl_label = 'ID Tools'
     bl_idname = 'ID_TOOLS_MT_Menu'
 
     def draw(self, context):
@@ -673,52 +713,13 @@ class id_tools_props(PropertyGroup):
         return item != exclude_id
     def reset_id(self, context):
         self.id = None
+    def update_prop(self, context):
+        if self.property == '':
+            self.property = 'id_tools_attach'
 
     id: PointerProperty(type=bpy.types.ID, poll=poll_id)
-    property: StringProperty(default='optiploy_attach')
-    id_type: EnumProperty(items=[
-        ('', 'ID Type', ''),
-        ('ACTION', 'Action', '', 'ACTION', 0),
-        ('ARMATURE', 'Armature', '', 'ARMATURE_DATA', 1),
-        ('BRUSH', 'Brush', '', 'BRUSH_DATA', 2),
-        ('CACHEFILE', 'Cache File', '', 'FILE', 3),
-        ('CAMERA', 'Camera', '', 'CAMERA_DATA', 4),
-        ('COLLECTION', 'Collection', '', 'OUTLINER_COLLECTION', 5),
-        ('CURVE', 'Curve', '', 'CURVE_DATA', 6),
-        ('CURVES', 'Curves', '', 'CURVES_DATA', 7),
-        ('FONT', 'Font', '', 'FONT_DATA', 8),
-        ('GREASEPENCIL', 'Grease Pencil', '', 'GREASEPENCIL', 9),
-        ('GREASEPENCIL_V3', 'Grease Pencil v3', '', 'GREASEPENCIL', 10),
-        ('IMAGE', 'Image', '', 'IMAGE_DATA', 11),
-        ('KEY', 'Key', '', 'SHAPEKEY_DATA', 12),
-        ('LATTICE', 'Lattice', '', 'LATTICE_DATA', 13),
-        ('LIBRARY', 'Library', '', 'LIBRARY_DATA_DIRECT', 14),
-        ('LIGHT', 'Light', '', 'LIGHT_DATA', 15),
-        ('LIGHT_PROBE', 'Light Probe', '', 'LIGHTPROBE_SPHERE', 16),
-        ('LINESTYLE', 'Line Style', '', 'LINE_DATA', 17),
-        ('MASK', 'Mask', '', 'MOD_MASK', 18),
-        ('MATERIAL', 'Material', '', 'MATERIAL_DATA', 19),
-        ('', '', ''),
-        ('MESH', 'Mesh', '', 'MESH_DATA', 20),
-        ('META', 'Metaball', '', 'META_DATA', 21),
-        ('MOVIECLIP', 'Movie Clip', '', 'TRACKER', 22),
-        ('NODETREE', 'Node Tree', '', 'NODETREE', 23),
-        ('OBJECT', 'Object', '', 'OBJECT_DATA', 24),
-        ('PAINTCURVE', 'Paint Curve', '', 'CURVE_BEZCURVE', 25),
-        ('PALETTE', 'Palette', '', 'COLOR', 26),
-        ('PARTICLE', 'Particle', '', 'PARTICLE_DATA', 27),
-        ('POINTCLOUD', 'Point Cloud', '', 'POINTCLOUD_DATA', 28),
-        ('SCENE', 'Scene', '', 'SCENE_DATA', 29),
-        ('SCREEN', 'Screen', '', 'WORKSPACE', 30),
-        ('SOUND', 'Sound', '', 'SOUND', 31),
-        ('SPEAKER', 'Speaker', '', 'SPEAKER', 32),
-        ('TEXT', 'Text', '', 'TEXT', 33),
-        ('TEXTURE', 'Texture', '', 'TEXTURE_DATA', 34),
-        ('VOLUME', 'Volume', '', 'VOLUME_DATA', 35),
-        ('WINDOWMANAGER', 'Window Manager', '', 'WINDOW', 36),
-        ('WORKSPACE', 'Workspace', '', 'WORKSPACE', 37),
-        ('WORLD', 'World', '', 'WORLD_DATA', 38)
-    ],
+    property: StringProperty(default='id_tools_attach', description='Custom Property name to save the ID under', update=update_prop)
+    id_type: EnumProperty(items=enum_id_items,
         name='ID Type',
         description='Type of data block to set values to',
         options={'SKIP_SAVE'},

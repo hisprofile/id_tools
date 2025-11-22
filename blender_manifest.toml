@@ -1,0 +1,20 @@
+schema_version = "1.0.0"
+
+id = "id_tools"
+version = "1.1.0"
+name = "ID Tools"
+tagline = "Assortment of tools for the manipulation of data-blocks"
+maintainer = "hisanimations <hisprofile029@gmail.com>"
+# Supported types: "add-on", "theme"
+type = "add-on"
+
+tags = ["Import-Export"]
+
+blender_version_min = "4.2.0"
+
+license = [
+  "SPDX:GPL-3.0-or-later",
+]
+
+[permissions]
+files = "Temporarily create .blend files to weigh them"
