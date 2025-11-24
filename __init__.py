@@ -430,8 +430,8 @@ class id_tools_OT_export(Operator):
 
 class id_tools_OT_id_quick_attach(Operator):
     bl_idname = 'id_tools.id_quick_attach'
-    bl_label = 'ID Quick Attach'
-    bl_description = 'Quickly parent selected children ID(s) to a parent ID with a custom property'
+    bl_label = 'Quick Parent to ID'
+    bl_description = 'Quickly parent children ID(s) to a parent ID using custom properties, ensuring the children IDs are always attached to the parent'
 
     bl_options = {'UNDO'}
 
@@ -484,8 +484,8 @@ class id_tools_OT_id_quick_attach(Operator):
 
 class id_tools_OT_id_attach(Operator):
     bl_idname = 'id_tools.id_attach'
-    bl_label = 'ID Attach'
-    bl_description = 'Parent selected children ID(s) to a parent ID with a custom property'
+    bl_label = 'Parent to ID'
+    bl_description = 'Parent children ID(s) to a parent ID using custom properties, ensuring the children IDs are always attached to the parent'
 
     add_to_existing: BoolProperty(default=False, name='Add to Existing', description='Add to the existing property')
 
@@ -548,7 +548,7 @@ class id_tools_OT_id_attach(Operator):
         box.alert = alert
 
         box = layout.box().column()
-        box.label(text='Host Data-Block:')
+        box.label(text='Parent Data-Block:')
         template_any_ID(box, props, 'id', 'id_type')
         
         box = layout.box().column()
@@ -560,8 +560,8 @@ class id_tools_OT_id_attach(Operator):
 
 class id_tools_OT_id_remove_from_hosts(Operator):
     bl_idname = 'id_tools.id_remove_from_hosts'
-    bl_label = 'Unparent Selected ID(s) from Parent(s)'
-    bl_description = 'Unparent selected IDs from possible parent IDs by removing them from custom properties'
+    bl_label = 'Unparent Selected ID(s)'
+    bl_description = 'Unparent selected IDs from possible parent IDs, by removing them from custom properties'
 
     def execute(self, context):
         ids = return_ids_set(context)
@@ -590,7 +590,7 @@ class id_tools_OT_id_remove_from_hosts(Operator):
 class id_tools_OT_parasite_remove(Operator):
     bl_idname = 'id_tools.parasite_remove'
     bl_label = 'Dump ID(s) from Selected Parent(s)'
-    bl_description = 'Dump all children IDs from selected parent IDs from custom properties'
+    bl_description = 'Unparent all children IDs parented to selected IDs by removing them from custom properties'
 
     def execute(self, context):
         hosts = return_ids_set(context)
