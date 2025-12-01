@@ -430,8 +430,8 @@ class id_tools_OT_export(Operator):
 
 class id_tools_OT_id_quick_attach(Operator):
     bl_idname = 'id_tools.id_quick_attach'
-    bl_label = 'Quick Parent to ID'
-    bl_description = 'Quickly parent children ID(s) to a parent ID using custom properties, ensuring the children IDs are always attached to the parent'
+    bl_label = 'Quick Make Pointer from Parent ID'
+    bl_description = 'Using custom properties, quickly make a pointer from the active "parent" ID to the selected IDs, ensuring a reference is always kept'
 
     bl_options = {'UNDO'}
 
@@ -445,12 +445,12 @@ class id_tools_OT_id_quick_attach(Operator):
 
     def does_exist_prop(self, context):
         id = context.id
-        prop = id.get('id_tools_attach', 'HAS_NO_PROP')
+        prop = id.get('id_tools_pointer', 'HAS_NO_PROP')
         return prop != 'HAS_NO_PROP'
     
     def can_add_to_existing(self, context):
         id: bpy.types.ID = context.id
-        prop = id.get('id_tools_attach', 'HAS_NO_PROP')
+        prop = id.get('id_tools_pointer', 'HAS_NO_PROP')
         if isinstance(prop, list):
             return flag_YES
         if isinstance(prop, bpy.types.ID):
@@ -469,23 +469,23 @@ class id_tools_OT_id_quick_attach(Operator):
 
         can_add = self.can_add_to_existing(context)
         if bool(can_add):
-            existing_ids = host_id.get('id_tools_attach')
+            existing_ids = host_id.get('id_tools_pointer')
             if can_add == flag_MAKE_LIST:
                 existing_ids = [existing_ids]
             existing_ids.extend(parasitic_ids)
-            host_id['id_tools_attach'] = existing_ids
+            host_id['id_tools_pointer'] = existing_ids
             return {'FINISHED'}
         else:
             if len(parasitic_ids) == 1:
-                host_id['id_tools_attach'] = parasitic_ids.pop()
+                host_id['id_tools_pointer'] = parasitic_ids.pop()
             else:
-                host_id['id_tools_attach'] = parasitic_ids
+                host_id['id_tools_pointer'] = parasitic_ids
             return {'FINISHED'}
 
 class id_tools_OT_id_attach(Operator):
     bl_idname = 'id_tools.id_attach'
-    bl_label = 'Parent to ID'
-    bl_description = 'Parent children ID(s) to a parent ID using custom properties, ensuring the children IDs are always attached to the parent'
+    bl_label = 'Make Pointer from Parent ID'
+    bl_description = 'Using custom properties, make a pointer from a "parent" ID to the selected IDs, ensuring a reference is always kept'
 
     add_to_existing: BoolProperty(default=False, name='Add to Existing', description='Add to the existing property')
 
@@ -541,7 +541,7 @@ class id_tools_OT_id_attach(Operator):
         layout = self.layout
         alert = does_exist and not (bool(can_append) and self.add_to_existing) and bool(props.id)
         box = layout.box().column()
-        box.label(text='Property:')
+        box.label(text='Custom Property (Pointer) Name:')
         row = box.row()
         row.prop(props, 'property', text='')
         row.alert = alert
@@ -560,8 +560,8 @@ class id_tools_OT_id_attach(Operator):
 
 class id_tools_OT_id_remove_from_hosts(Operator):
     bl_idname = 'id_tools.id_remove_from_hosts'
-    bl_label = 'Unparent Selected ID(s)'
-    bl_description = 'Unparent selected IDs from possible parent IDs, by removing them from custom properties'
+    bl_label = 'Remove All Pointers to IDs'
+    bl_description = 'Remove all custom properties that are used to point to the selected IDs'
 
     def execute(self, context):
         ids = return_ids_set(context)
@@ -589,8 +589,8 @@ class id_tools_OT_id_remove_from_hosts(Operator):
 
 class id_tools_OT_parasite_remove(Operator):
     bl_idname = 'id_tools.parasite_remove'
-    bl_label = 'Dump ID(s) from Selected Parent(s)'
-    bl_description = 'Unparent all children IDs parented to selected IDs by removing them from custom properties'
+    bl_label = 'Dump All Pointers from IDs'
+    bl_description = 'Dump all custom properties from the active IDs that are used to point to other IDs'
 
     def execute(self, context):
         hosts = return_ids_set(context)
@@ -614,8 +614,8 @@ class id_tools_OT_parasite_remove(Operator):
 
 class id_tools_OT_make_props_overridable(Operator):
     bl_idname = 'id_tools.make_props_overridable'
-    bl_label = 'Make Properties Overridable'
-    bl_description = 'Make all custom properties on this ID library overridable'
+    bl_label = 'Make C.Properties Overridable'
+    bl_description = 'Enable the "Library Overridable" flag on all custom properties on the selected ID'
 
     def execute(self, context):
         ids = return_ids_set(context)
@@ -630,7 +630,7 @@ class id_tools_OT_make_props_overridable(Operator):
 class id_tools_OT_path_report(Operator):
     bl_idname = 'id_tools.path_report'
     bl_label = 'User Path Report'
-    bl_description = 'Experimental! Reports all paths where an ID is used into the console.'
+    bl_description = 'Reports all paths where an ID is used into the console'
 
     def execute(self, context):
         from . import id_tools_path_report
@@ -644,7 +644,7 @@ class id_tools_OT_path_report(Operator):
                 id_tools_path_report.main_id = user
                 print('USER:', repr(user))
                 id_tools_path_report.starter(user, [repr(user)], [], id, False)
-                print()
+                print() # one line separation from other users
         print('END REPORT!')
         print('-----------')
         self.report({'INFO'}, 'Read report in the console!')
@@ -657,19 +657,21 @@ class ID_TOOLS_MT_Menu(Menu):
     def draw(self, context):
         props = context.preferences.addons[__package__].preferences
         layout = self.layout
+        #layout.label(text='Data Management/De-bugging', icon='MODIFIER')
         layout.prop(props, 'compress')
         layout.operator('id_tools.weigh')
         layout.operator('id_tools.export')
         layout.operator('id_tools.replace_id')
+        layout.operator('id_tools.path_report')
         layout.separator()
+        #layout.label(text='Make/Manage Pointers', icon='RESTRICT_SELECT_OFF')
         if context.area.type == 'OUTLINER':
             layout.operator('id_tools.id_quick_attach')
         layout.operator('id_tools.id_attach')
         layout.operator('id_tools.id_remove_from_hosts')
         layout.operator('id_tools.parasite_remove')
-        layout.operator('id_tools.make_props_overridable')
         layout.separator()
-        layout.operator('id_tools.path_report')
+        layout.operator('id_tools.make_props_overridable')
 
 def menu_func(self, context):
     global floating_id
@@ -715,10 +717,10 @@ class id_tools_props(PropertyGroup):
         self.id = None
     def update_prop(self, context):
         if self.property == '':
-            self.property = 'id_tools_attach'
+            self.property = 'id_tools_pointer'
 
     id: PointerProperty(type=bpy.types.ID, poll=poll_id)
-    property: StringProperty(default='id_tools_attach', description='Custom Property name to save the ID under', update=update_prop)
+    property: StringProperty(default='id_tools_pointer', description='Name of the custom property to be used as the pointer', update=update_prop)
     id_type: EnumProperty(items=enum_id_items,
         name='ID Type',
         description='Type of data block to set values to',
