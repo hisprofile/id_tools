@@ -2,12 +2,12 @@ bl_info = {
     "name" : 'ID Tools' ,
     "description" : "Quickly inspect the total size of datablocks",
     "author" : "hisanimations",
-    "version" : (1, 1, 0),
-    "blender" : (3, 0, 0),
+    "version" : (1, 2, 0),
+    "blender" : (4, 0, 0),
     "location" : "Outliner > Context Menu > ID Tools",
     "support" : "COMMUNITY",
     "category" : "Import-Export",
-    "doc_url": "https://github.com/hisprofile/datascale"
+    "doc_url": "https://github.com/hisprofile/id_tools"
 }
 
 import bpy
